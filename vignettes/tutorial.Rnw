@@ -36,6 +36,15 @@ No movie files are required as all functions are illustrated by simulated image 
 \newpage
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% Load all result files
+<<allresults,eval=TRUE,echo=FALSE>>=
+load("allResults.RData")
+
+#save('allFullImages','stillBack','allImages','partIden',
+#     'records','results','finalNN', file='allResults.RData')
+
+@
+
 \section{Simulate image sequences}
 The package \emph{trackdem} contains functions to simulate an image sequence, which 
 makes it straightforward to illustrate the functionality of the package or test 
@@ -52,7 +61,7 @@ are allowed to move in a rectangle domain. Use
 \emph{domain="circle"} to use a circular domain of radius 1. Images are saved as 
 .png files in the path specified with argument \emph{path}.
 
-<<simul,eval=TRUE>>=
+<<simul,eval=FALSE>>=
 require(trackdem)
 dir.create("images")
 set.seed(1000)
@@ -83,9 +92,12 @@ information.
 Next, we load the sequence into R, continuing with our simulated 
 sequence:
 
-<<loadImageSeq, eval=TRUE>>=
+<<loadImageSeq, eval=FALSE>>=
 dir <- "images"
 allFullImages <- loadImages (dirPictures=dir,nImages=1:30)
+@
+
+<<loadImageSeqPrint, eval=TRUE>>=
 allFullImages
 class(allFullImages)
 @
@@ -108,7 +120,7 @@ plot(allFullImages,frame=1)
 @
 
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{plot-1.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/plot-1.png}
 \caption{First frame of loaded (simulated) image sequence.}
 \label{fig:allFullImages}
 \end{figure}
@@ -123,9 +135,12 @@ detection. By default, the mean pixel values over all frames, per
 color, is calculated (\emph{method="mean"}). Alternatives are 
 \emph{method="powerroot"} and \emph{method="filter"} (see ?createBackground).
 
-<<makeBackground, eval=TRUE>>=
+<<makeBackground, eval=FALSE>>=
 ## Detect background
 stillBack <- createBackground(allFullImages,method="mean")
+@
+
+<<makeBackgroundPrint, eval=TRUE>>=
 class(stillBack)
 stillBack
 @
@@ -139,7 +154,7 @@ plot(stillBack)
 @
 
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{plotBackground-1.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/plotBackground-1.png}
 \caption{Example of background obtained using function 
 $createBackground$, and \emph{method="mean"}}
 \label{fig:stillback}
@@ -150,7 +165,7 @@ When we simulate trajectories containing static noise and a circular domain,
 we can confirm that the background image succesfully detects the static noise and 
 circle:
 
-<<BackgroundNoise, eval=TRUE>>=
+<<BackgroundNoise, eval=FALSE>>=
 dir.create('imagesNoise')
 trajNoise <- simulTrajec(path="imagesNoise",
                     nframes=30,nIndividuals=20,domain='circle',
@@ -162,9 +177,8 @@ stillBackNoise <- createBackground(allFullImagesNoise,method="mean")
 plot(stillBackNoise)
 @
 
-
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{plotBackgroundNoise-1.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/plotBackgroundNoise-1.png}
 \caption{Example of background obtained using function 
 $createBackground$, and \emph{method="mean"}, including static noise and a 
 circular domain.}
@@ -175,9 +189,8 @@ Continuing with the sequence without noise, we now subtract the background from 
 identify all moving particles. By default, the original color images are used from the global environment. The argument 
 \emph{colorimages} can be used to specify a different set of images.
 
-<<substrBackground, eval=TRUE>>=
+<<substrBackground, eval=FALSE>>=
 allImages <- subtractBackground(bg=stillBack)
-allImages
 @
 
 The procedure produces a four dimensional array ($N_y$ rows $\times$ $N_x$ columns 
@@ -212,7 +225,7 @@ channel does not distuingish between background and particles. Select another
 color channel to find appropriate threshold values.
 
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{findThreshold.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/findThreshold.png}
 \caption{Graphical user interface to help users find the most appropriate 
 threshold value.}
 \label{fig:thr}
@@ -233,11 +246,14 @@ removed (set with argument \emph{pixelRange}). This can be used as a
 first noise filter when users know the size range of their study 
 organisms (in pixels).
 
-<<identifyParticles, eval=TRUE>>=
+<<identifyParticles, eval=FALSE>>=
 ## Identify moving particles
 partIden <- identifyParticles(sbg=allImages,threshold=-0.1,
                               pixelRange=c(1,500),
                               autoThres=FALSE)
+@
+
+<<identifyParticlesPrint, eval=TRUE>>=
 summary(partIden)
 @
 
@@ -246,13 +262,12 @@ identified particles for each frame, use $summary()$ to obtain some
 summary statistics. Identified particles can be 
 plotted as open circles on the original image with:
 
-
 <<plotpartIden, eval=FALSE, fig=TRUE, fig.width = 3, fig.height = 3>>=
 plot(partIden,frame=10)
 @
 
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{plotpartIden-1.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/plotpartIden-1.png}
 \caption{Identified moving particles shown as open circles using $identifyParticles$}
 \label{fig:partIden}
 \end{figure}
@@ -263,10 +278,6 @@ plot(partIden,frame=10)
 The next step is to reconstruct trajectories for 
 each particle. In short, the tracking consists of two steps. First, particles in subsequent 
 frames are linked, based on their size and distance. Second, trajectories that are not overlapping in time and likely involve the same particle, are merged, to fill gaps.
-
-<<trackParticlesHidden, eval=TRUE,results=hide >>=
-records <- trackParticles(partIden,L=60,R=3)
-@
 
 <<trackParticles, eval=FALSE,cache=FALSE,echo=FALSE, results=hide >>=
 ## Reconstruct trajectories
@@ -371,7 +382,7 @@ for (i in 1:length(unique(traj$id))) {
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{plotRecords-1.png}
+\includegraphics[width=0.8\linewidth]{figures/plotRecords-1.png}
 \caption{Comparison of particle movement according to simulated 
 trajectories (grey dashed lines) and as obtained using \emph{trackdem} (colored lines).}
 \label{fig:trajec}
@@ -401,7 +412,7 @@ wrong trajectories. See Fig. \ref{fig:wrongtrajec} for an example where we set
 \emph{R}, we recommend users to plot reconstructed trajectories.
 
 \begin{figure}[H]
-\includegraphics[width=1\linewidth,page=1]{effectLR.pdf}
+\includegraphics[width=1\linewidth,page=1]{figures/effectLR.pdf}
 \caption{Effect of user-defined \emph{L} and \emph{R}. Two image sequences were 
 simulated; one with a low density (left) and one with a high density (right). 
 The number of particles was estimated for different \emph{L} values, and for 
@@ -411,7 +422,7 @@ horizontal lines show the simulated number of particles.}
 \end{figure}
 
 \begin{figure}[H]
-\includegraphics[width=0.6\linewidth]{wrongTrajec.png}
+\includegraphics[width=0.6\linewidth]{figures/wrongTrajec.png}
 \caption{Effect of user-defined \emph{L} that is set unrealistically high. 
 Whenever particles are not detected in one frame, they are wrongly linked to 
 another particle, that is clearly not the correct particle.}
@@ -466,7 +477,7 @@ mId <- manuallySelect(particles=partIden,frame=10)
 
 
 \begin{figure}[H]
-\includegraphics[width=0.8\linewidth,page=1]{trackdemManuallySelect.png}
+\includegraphics[width=0.8\linewidth,page=1]{figures/trackdemManuallySelect.png}
 \caption{Graphical user interface to manually select false and true 
 positives using function $manuallySelect$. Blue circles indicate 
 identified particles. In this case, most identified particles are 
@@ -522,10 +533,6 @@ they must correspond to column names in the object obtained with
 principal component analysis can be performed (\emph{pca=TRUE} by default) on the 
 predictors, which ensures that only the variables explaining a high 
 proportion of the total variance are used (by default 0.95, change with argument \emph{thr}). The results can be evaluated:
-
-<<loadNN,eval=TRUE , echo=FALSE >>=
-load('nnVignetteSimul.RData')
-@
 
 <<outputnn,eval=TRUE>>=
 finalNN
@@ -591,7 +598,7 @@ containing image sequences in \emph{path}. For instance, we create
 three images sequences in three folders in a new directory we call 
 "batchTest":
 
-<<batchSetup, eval=TRUE,results=hide>>=
+<<batchSetup, eval=FALSE,results=hide>>=
 # simulate 3 image sequences
 wd <- getwd()
 folders <- paste0(rep("images",3),1:3)
@@ -618,7 +625,7 @@ Alternatively, settings can
 be provided manually (see \textit{?runBatch}). To run the batch 
 analysis, use:
 
-<<batch, eval=TRUE,results=hide>>=
+<<batch, eval=FALSE,results=hide>>=
 setwd(wd)
 batchpath <- "./batchTest"
 results <- runBatch(path=batchpath,settings=records,incThres=10)
@@ -832,7 +839,6 @@ instance
 Alternatively, users can skip this step, and convert a video into a image 
 sequence using other software. Once this is done, you can continue with 
 \emph{loadImages}, as described in Section \ref{sec:load}.
-
 
 
 \end{document}
