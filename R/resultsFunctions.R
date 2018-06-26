@@ -439,8 +439,11 @@ plot.TrDm <- function(x,frame=1,type=NULL,incThres=NULL,colorimages=NULL,
             height <- ifelse(nrow(colorimages) %% 2 == 0, 
                             nrow(colorimages),nrow(colorimages)+1)
             rownames(x) <- 1:nrow(x)
-           for (i in 1:ncol(x)) {
-              grDevices::png(paste0(path,'/images/images',i,'.png'),width=width,
+            tot <- ncol(x)
+           for (i in 1:tot) {
+              grDevices::png(paste0(path,'/images/images',
+                             formatC(i,width=nchar(tot),flag="0"),'.png'),
+                             width=width,
                              height=height)
               graphics::plot(colorimages,frame=i)
               graphics::points(x[,i,1]/width,
