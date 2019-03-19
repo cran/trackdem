@@ -289,7 +289,8 @@ print.TrDm <- function(x,...) {
   if (inherits(x,"colorimage")) {
     d <- dim(x)
     cat("\t Trackdem color image \n")
-    cat(paste("\t Images with size:",d[1],"x",d[2]," pixels.\n"))
+    cat(paste("\t Images with size:",d[1],"x",d[2],"pixels and",d[3],
+              "color channel(s).\n"))
     if (length(d) == 4) {
       cat(paste("\t Total of",d[4],"images. \n\n"))
     } else if (length(d) == 3) {
@@ -359,12 +360,15 @@ plot.TrDm <- function(x,frame=1,type=NULL,incThres=NULL,colorimages=NULL,
   oldPar <- graphics::par()
 
    if (inherits(x, "colorimage")) {  
-    if (length(dim(x)) > 3) {
-      x <- raster::brick(x[,,,frame])
-    } else if (length(dim(x)) == 3) {
+    if (length(dim(x)) > 3) { ## multiple frames
+      x <- x[,,,frame,drop=FALSE]
+      x <- array(x,dim=c(dim(x)[1:3]))
+      x <- raster::brick(x)
+    } else if (length(dim(x)) == 3) { ## for background image (1 frame)
       class(x) <- 'array'
       x <- raster::brick(x)
     }
+    if (dim(x)[3] == 1) warning("Creating plot for 1 color channel image")
     raster::plotRGB(x,scale=1,asp=nrow(x)/ncol(x),...)
   } else if (inherits(x,"tracked")) {
     if (is.null(incThres)) {
@@ -454,6 +458,15 @@ plot.TrDm <- function(x,frame=1,type=NULL,incThres=NULL,colorimages=NULL,
                      1-x[,i,2]/height,
                      col='black',
                      cex=1,lwd=2,labels=seq_len(nrow(x)),pos=2)
+                     
+              for (j in 1:nrow(x)) {
+                graphics::lines(x[j,1:i,1]/width,
+                                1-x[j,1:i,2]/height,
+                                col=grDevices::rainbow(nrow(x),
+                                                 alpha=0.5)[as.numeric(rownames(x))][j],
+                                lwd=4)
+              }
+                     
               cat("\r \t Animation:",i,"out of",ncol(x))
               grDevices::dev.off()
            }
