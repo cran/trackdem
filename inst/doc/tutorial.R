@@ -337,7 +337,7 @@ results
 ### code chunk number 31: libav (eval = FALSE)
 ###################################################
 ## # sudo apt-get update
-## # sudo apt-get install libav-tools
+## # sudo apt install ffmpeg
 ## # sudo apt-get install libimage-exiftool-perl
 
 
@@ -346,8 +346,8 @@ results
 ###################################################
 ## ## Make sure that homebrew is installed, see: https://brew.sh/
 ## 
-## ## Install libav
-## # brew install libav
+## ## Install FFmpeg
+## # brew install ffmpeg
 
 
 ###################################################
