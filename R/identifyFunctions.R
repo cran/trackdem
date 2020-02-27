@@ -428,7 +428,7 @@ subtractBackground <- function (bg,colorimages=NULL) {
 ##'  which works for dark particles on a light background. Alternatively,
 ##' set \code{autoThres} below for an automatic threshold.
 ##' @param pixelRange Default is \code{NULL}. Numeric vector with minimum and
-##' maximum particle size, used as a
+##' maximum particle size (area), used as a
 ##' first filter to identify particles. Use if particle of interest are of a
 ##' known size range (in pixels).
 ##' @param qthreshold Default is \code{NULL}. Supply a value, to do thresholding
