@@ -185,44 +185,24 @@ linkTrajec <- function (recordsObject,particles,
   sizeRecord <- recordsObject$sizeRecord
   colorRecord <- recordsObject$colorRecord
   label <- recordsObject$label
-  trackRecord[is.na(trackRecord)] <- 0
-  label[is.na(label)] <- 0
-  sizeRecord[is.na(sizeRecord)] <- 0
-
-  colorRecord[colorRecord == 0 & !is.na(colorRecord)] <-
-         colorRecord[colorRecord == 0 & !is.na(colorRecord)] + 0.000001
-  colorRecord[is.na(colorRecord)] <- 0
 
   n <- unique(particles$frame)
 
   cat("\t Link track segments: 0 %            ")
 
   for (r in 1:R) {
-    links <- list()
-
     for (i in 1:(length(n)-1-r)) {
       inc <- particles$frame == i
       inc2 <- particles$frame == (i + r)
-      endTrajec <- as.vector(stats::na.omit(label[apply(
+      endTrajec <- as.vector(label[apply(
                              trackRecord[,i:(i+1),1],1,function(x)
-                                             x[1] != 0 & x[2] == 0),i]))
-      beginTrajec <- as.vector(stats::na.omit(label[apply(
+                                             !is.na(x[1]) & is.na(x[2])),i])
+      beginTrajec <- as.vector(label[apply(
                              trackRecord[,(i+r-1):(i+r),1],1,function(x)
-                                                x[1]==0 & x[2]>0),i+r]))
+                                                is.na(x[1]) & !is.na(x[2])),i+r])
       beginTrajec <- beginTrajec[beginTrajec != 0]
 
       if (length(endTrajec)>0 & length(beginTrajec)>0) {
-
-        if (i > 1) {
-          tmp <- as.vector(stats::na.omit(label[apply(
-                               trackRecord[,i:(i+1),1],1,function(x)
-                                               x[1] != 0 & x[2] == 0),i-1]))
-          tmp <- tmp[tmp > 1] - 1
-          coords0 <- matrix(c(particles[particles$frame == (i-1),]$x[tmp],
-                            particles[particles$frame == (i-1),]$y[tmp]),ncol=2,
-                            byrow=FALSE)
-          rownames(coords0) <- tmp
-        }
 
         coords1 <- matrix(c(particles[inc,]$x[endTrajec],
                    particles[inc,]$y[endTrajec]),ncol=2,byrow=FALSE)
@@ -238,30 +218,39 @@ linkTrajec <- function (recordsObject,particles,
 
 
         Phi <- phiMat(coords1,coords2,
-	                  sizes1=sizes1,
-	                  sizes2=sizes2,
-	                  L=Lnew,r=1,weight=weight,coords0=NULL,
+                    sizes1=sizes1,
+                    sizes2=sizes2,
+                    L=Lnew,r=1,weight=weight,coords0=NULL,
                     logsizes=logsizes)
-        gstart <- gMat(Phi)
-
+        gstart <- matrix(0,nrow=nrow(Phi),ncol=ncol(Phi))
+        gstart[1,] <- 1
+        gstart[,1] <- 1
         A <- track(Phi=Phi, g=gstart, L=Lnew) * Phi
 
         tmp <- data.frame(which(A > 0,TRUE))
         tmp <- tmp[tmp[,1] != 1,]
         tmp <- tmp[tmp[,2] != 1,]
 
+        # if any successful links
         if (dim(tmp)[1] > 0) {
           for (k in 1:(dim(tmp)[1])) {
            ind1 <- which(label[,i] ==  endTrajec[tmp[k,2]-1])
            ind2 <- which(label[,i+r] ==  beginTrajec[tmp[k,1]-1])
 
-            trackRecord[ind1,,1] <- trackRecord[ind1,,1] + trackRecord[ind2,,1]
-            trackRecord[ind1,,2] <- trackRecord[ind1,,2] + trackRecord[ind2,,2]
-            label[ind1,] <- label[ind1,] + label[ind2,]
-            sizeRecord[ind1,] <- sizeRecord[ind1,] + sizeRecord[ind2,]
-            colorRecord[ind1,,1] <- colorRecord[ind1,,1] + colorRecord[ind2,,1]
-            colorRecord[ind1,,2] <- colorRecord[ind1,,2] + colorRecord[ind2,,2]
-            colorRecord[ind1,,3] <- colorRecord[ind1,,3] + colorRecord[ind2,,3]
+            # combine trajectories
+            trackRecord[ind1,,1] <- pmin(trackRecord[ind1,,1],trackRecord[ind2,,1],
+                                         na.rm=TRUE)
+            trackRecord[ind1,,2] <- pmin(trackRecord[ind1,,2],trackRecord[ind2,,2],
+                                         na.rm=TRUE)
+            label[ind1,] <- pmin(label[ind1,],label[ind2,],na.rm=TRUE)
+            sizeRecord[ind1,] <- pmin(sizeRecord[ind1,],sizeRecord[ind2,],
+                                      na.rm=TRUE)
+            colorRecord[ind1,,1] <- pmin(colorRecord[ind1,,1],colorRecord[ind2,,1],
+                                         na.rm=TRUE)
+            colorRecord[ind1,,2] <- pmin(colorRecord[ind1,,2],colorRecord[ind2,,2],
+                                         na.rm=TRUE)
+            colorRecord[ind1,,3] <- pmin(colorRecord[ind1,,3],colorRecord[ind2,,3],
+                                         na.rm=TRUE)
 
             # Take mean values for coordinates in between
             if (r > 1) {
@@ -283,14 +272,11 @@ linkTrajec <- function (recordsObject,particles,
     }
   }
 
-  trackRecord[trackRecord == 0] <- NA
-  label[label == 0] <- NA
-  sizeRecord[sizeRecord == 0] <- NA
-  colorRecord[colorRecord == 0] <- NA
   inc <- apply(trackRecord[,,1],1,function(x) !all(is.na(x)))
   res <- list(trackRecord=trackRecord[inc,,],
               label=label[inc,],
               sizeRecord=sizeRecord[inc,],colorRecord=colorRecord[inc,,])
+
   return(res)
 }
 
@@ -516,11 +502,11 @@ mergeTracks <- function(records1,records2,L=NULL,weight=NULL,
       A[i,] <- c(mat1[l[i,2],],mat2[l[i,1],])
     }
     todo1 <- !seq_len(nrow(mat1)) %in% l[,2]
-    m <- mat1[todo1,]
+    m <- mat1[todo1,,drop=FALSE]
     m <- cbind(m,matrix(NA,ncol=ncol(mat2),nrow=nrow(m)))
 
     todo2 <- !seq_len(nrow(mat2)) %in% l[,1]
-    m2 <- mat2[todo2,]
+    m2 <- mat2[todo2,,drop=FALSE]
     m2 <- cbind(matrix(NA,ncol=ncol(mat1),nrow=nrow(m2)),m2)
 
     return(rbind(A,m,m2))
@@ -614,6 +600,12 @@ mergeTracks <- function(records1,records2,L=NULL,weight=NULL,
 ##
 trackParticles <- function (particles,L=50,R=2,
                             weight=c(1,1,1),costconstant=FALSE,logsizes=FALSE) {
+
+  if (any(summary(particles)$n == 0)) {
+    stop(c("\n \t No particle detected in one or more of the frames, ",
+           "tracking cannot be performed. \n",
+           "Try different thresholds? \n"))
+  }
   records <- doTrack(particles=particles,L=L,weight=weight,logsizes=logsizes)
   cat("\n")
   rec <- linkTrajec (recordsObject=records,
@@ -629,4 +621,152 @@ trackParticles <- function (particles,L=50,R=2,
   attr(rec,"settings") <- c(attributes(particles)$settings,
                             list(R=R,L=L,weight=weight))
   return(rec)
+}
+
+
+
+##' Find maximum tracking cost
+##'
+##' This function can help to find a appropriate maximum value for linking
+##' a particle to another particle (parameter L in function \code{trackParticles})
+##' @param particles Object of class 'particles', obtained using \code{identifyParticles}.
+##' @param colorimages Array containing original color images. By default,
+##' the original color images are obtained from the global environment.
+##' @param frame Number specifying which frame to use. Default is frame 1.
+##' @author Marjolein Bruijning
+##' @examples
+##' \dontrun{
+##' partIden <- identifyParticles(sbg=allImages,
+##'                               threshold=-0.05)
+##' maxcost <- findMaxCost(partIden,frame=1)
+##' records <- trackParticles(partIden,L=maxcost,R=1)
+##'	}
+##' @return Returns the number that is interactively chosen by the user. Use
+##' this value in \code{trackParticles}.
+##' @export
+findMaxCost <- function (particles,frame=1,colorimages=NULL) {
+
+  if(is.null(colorimages)) {
+    colorimages <- get(attributes(particles)$originalImages,
+                       envir=.GlobalEnv)
+  }
+
+  cost <- runMaxCost(frame,colorimages,particles)
+  return(cost)
+}
+
+runMaxCost <- function(frame,colorimages,ps,ui,server) {
+shiny::runApp(
+  list(ui=shiny::fluidPage(
+  shiny::titlePanel(paste0("Find appropriate maximum 'cost' for linking two particles")),
+  shiny::fluidRow(
+     shiny::column(3,
+     'The graph on the left shows the focal frame. Click on a particle to select it.
+      Graph on the right shows the next frame. Use the slider to set the maximum cost value,
+      and assign a weight to the distance and size difference (see ?trackParticles for
+      more information). In the right image, all links that can be made are shown in orange.
+      Ideally, you choose a value so that all true links are being made, but not too many
+      wrong links. Try this for different particles to find good values. When finished, click on "Done".',
+      align='left',offset=0),
+
+      shiny::column(2,
+       shiny::actionButton("stop", "Done"),
+       shiny::br(),shiny::br()),
+
+      shiny::column(6,
+        shiny::sliderInput("cost", "Maximum cost L:",
+                    min=0,max=200,value=200,step=1,width='1000px'),
+        shiny::numericInput("weight1", "Weight distance:",value=1),
+        shiny::numericInput("weight2", "Weight size difference:",value=1)
+        )
+      ),
+  shiny::hr(),
+  shiny::fluidRow(
+    shiny::column(6,
+    shiny::h3('Focal frame'),
+    shiny::plotOutput("plot1",click = "plot_click")),
+    shiny::column(6,
+      shiny::h3('Next frame'),
+      shiny::plotOutput("plot2"))
+  )
+
+),
+  server=function(input, output) {
+
+
+   xrange <- ncol(colorimages)
+   yrange <- nrow(colorimages)
+
+
+  click_saved <- shiny::reactiveValues(singleclick = NULL)
+  shiny::observeEvent(eventExpr = input$plot_click, handlerExpr = {click_saved$singleclick <- input$plot_click})
+
+   updateParticle <- shiny::reactive({
+     inc <- ps$frame == frame
+     conv <- ps[inc,]
+     conv$x <- conv$x/xrange
+     conv$y <- 1-conv$y/yrange
+     getpoint <- shiny::nearPoints(conv,click_saved$singleclick,xvar='x',yvar='y',
+       maxpoints=1,threshold=1E6)
+   })
+
+
+   output$plot1 <- shiny::renderPlot({
+     suppressWarnings(graphics::plot(colorimages,frame=frame))
+     inc <- ps$frame == frame
+     graphics::points(ps[inc,]$x/ncol(colorimages),1-ps[inc,]$y/nrow(colorimages),
+            cex=1.2)
+     xy <- updateParticle()
+     graphics::points(xy$x,xy$y,
+                     col='green',lwd=3)
+   })
+
+   output$plot2 <- shiny::renderPlot({
+     suppressWarnings(graphics::plot(colorimages,frame=frame+1))
+
+     inc1 <- ps$frame == frame
+     inc2 <- ps$frame == frame + 1
+
+     fp <- updateParticle()
+     focalpart <- which(fp$patchID == ps$patchID[inc1])
+
+     coords1 <- ps[inc1,c('x','y')]
+     coords2 <- ps[inc2,c('x','y')]
+
+
+     costs <- phiMat(
+                coords1=coords1,
+                coords2=coords2,
+                sizes1=ps[inc1,'n.cell'],
+                sizes2=ps[inc2,'n.cell'],
+                L=input$cost,
+                r=1,
+                weight=c(input$weight1,input$weight2,0),
+                coords0=NULL,
+                logsizes=FALSE)
+
+    add <- costs[-1,-1][,focalpart] < input$cost # columns: current frame
+    xy <- coords2[add,]
+
+    if (nrow(xy) > 0) {
+      graphics::segments(
+        x0=coords1[focalpart,'x']/xrange,
+        x1=xy[,'x']/xrange,
+        y0=1-coords1[focalpart,'y']/yrange,
+        y1=1-xy[,'y']/yrange,
+        lwd=4,col='#e3730250')
+
+      graphics::points(coords1[focalpart,'x']/xrange,
+        1-coords1[focalpart,'y']/yrange,
+        pch=16,col='green')
+
+      graphics::points(xy[,'x']/xrange,
+        1-xy[,'y']/yrange,
+        col='blue')
+    }
+   })
+
+   shiny::observeEvent(input$stop, shiny::stopApp({input$cost}))
+  }
+ ))
 }
