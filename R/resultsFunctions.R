@@ -485,7 +485,7 @@ plot.TrDm <- function(x,frame=1,type=NULL,incThres=NULL,colorimages=NULL,
     graphics::plot(colorimages,frame=frame)
     inc <- x$frame == frame
     graphics::points(x[inc,]$x/ncol(colorimages),1-x[inc,]$y/nrow(colorimages),
-           cex=1.2)
+           cex=1.2,col='green')
   } else if (inherits(x,"tfp")) {
       warning("No valid plot plot method for created training data.")
   } else if (inherits(x,"neuralnet")) {

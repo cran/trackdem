@@ -2,10 +2,19 @@
 % Please edit documentation in R/help.R
 \docType{package}
 \name{trackdem}
+\alias{trackdem-package}
 \alias{trackdem}
 \title{trackdem - Particle Tracking and Demography}
 \description{
 trackdem - Particle Tracking and Demography
+}
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/marjoleinbruijning/trackdem}
+  \item Report bugs at \url{https://github.com/marjoleinbruijning/trackdem/issues}
+}
+
 }
 \author{
 Marjolein Bruijning, Caspar A. Hallmann, Marco D. Visser, Eelke Jongejans

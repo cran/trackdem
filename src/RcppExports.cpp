@@ -6,6 +6,11 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // cb
 NumericVector cb(NumericVector m1, NumericVector m2, NumericVector m3, IntegerVector d, IntegerVector e);
 RcppExport SEXP _trackdem_cb(SEXP m1SEXP, SEXP m2SEXP, SEXP m3SEXP, SEXP dSEXP, SEXP eSEXP) {
